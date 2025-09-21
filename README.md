@@ -1,4 +1,4 @@
-# Xử lý Streaming IoT với MQTT – Kafka – Spark
+# Bài tập thực hành: Xử lý Streaming IoT với MQTT – Kafka – Spark
 
 ## Yêu cầu:
 Phát hiện trạm sản xuất có tỷ lệ sản phẩm lỗi ≥ 5% theo thời gian thực bằng MQTT, Kafka và Spark Structured Streaming
