@@ -1,0 +1,69 @@
+services:
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    hostname: kafka
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:29092
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:29092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_CFG_LOG_DIRS: /tmp/kraft-combined-logs
+    ports:
+      - "9092:9092"
+
+  spark-master:
+    image: bitnami/spark:3.5.1
+    container_name: spark-master
+    ports:
+      - "8088:8080"
+      - "7077:7077"
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+    volumes:
+      - ./scripts/defect_detection.py:/opt/bitnami/spark/scripts/defect_detection.py
+
+  spark-worker:
+    image: bitnami/spark:3.5.1
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_CORES: 1
+      SPARK_WORKER_MEMORY: 2G
+      SPARK_DRIVER_MEMORY: 2G
+      SPARK_EXECUTOR_MEMORY: 2G
+  
+  generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: python-base
+    pull_policy: never
+    container_name: generator
+    depends_on:
+      - kafka
+    volumes:
+      - ./scripts/generator.py:/generator.py
+    command: python generator.py
+
+  producer:
+    image: python-base
+    pull_policy: never
+    container_name: producer
+    depends_on:
+      - kafka
+    volumes:
+      - ./scripts/producer.py:/producer.py
+    command: python producer.py
